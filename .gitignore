@@ -1,0 +1,18 @@
+# Build artifacts
+build/
+*.o
+*.a
+*.so
+
+# IDE files
+.vscode/
+*.swp
+*.swo
+*~
+
+# System files  
+.DS_Store
+Thumbs.db
+
+# Cross-compilation artifacts
+Makefile.cross
