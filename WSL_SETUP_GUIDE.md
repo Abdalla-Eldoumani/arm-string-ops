@@ -65,7 +65,7 @@ From your Windows filesystem, copy the project to WSL:
 
 ```bash
 # Copy project from Windows to WSL home directory
-cp -r '/mnt/c/Users/[USERNAME]/.vscode/Vibe Code Test/claude/arm_string_ops' ~/arm_string_ops
+cp -r '/mnt/c/Users/[USERNAME]' ~/arm_string_ops
 
 # Navigate to project directory
 cd ~/arm_string_ops
