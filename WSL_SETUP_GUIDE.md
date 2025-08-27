@@ -2,14 +2,6 @@
 
 This guide shows you how to set up, compile, and test the ARMv8 NEON-accelerated string operations library in Windows Subsystem for Linux (WSL).
 
-## 🎯 What We Accomplished
-
-✅ **Successfully built** ARMv8 assembly library with NEON SIMD instructions  
-✅ **Cross-compiled** from x86_64 to ARM64 architecture  
-✅ **Fixed assembly syntax** issues for GNU assembler compatibility  
-✅ **Verified functionality** with 4 working operations: case conversion and UTF-8 processing  
-✅ **Achieved high performance** (~1GB/s throughput under QEMU emulation)  
-
 ## 🔧 Prerequisites
 
 - **Windows 10/11** with WSL2 installed
