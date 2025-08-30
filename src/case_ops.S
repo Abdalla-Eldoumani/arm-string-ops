@@ -11,8 +11,8 @@
 .global neon_to_upper
 .type neon_to_upper, %function
 neon_to_upper:
-    cbz     x1, 9f              // Return if len == 0
-    cbz     x0, 9f              // Return if str == NULL
+    cbz     x1, .Lupper_ret     // Return if len == 0
+    cbz     x0, .Lupper_ret     // Return if str == NULL
     
     mov     x2, x0              // Save original string pointer
     add     x3, x0, x1          // End pointer
@@ -24,28 +24,29 @@ neon_to_upper:
 
     // Handle unaligned head bytes
     ands    x4, x0, #15
-    beq     2f                  // Already aligned
+    beq     .Lupper_aligned     // Already aligned
     
-1:  // Scalar processing for head alignment
+.Lupper_head:  // Scalar processing for head alignment
     ldrb    w5, [x0]
     cmp     w5, #'a'
-    blt     1f
+    blt     .Lupper_head_skip
     cmp     w5, #'z'
-    bgt     1f
+    bgt     .Lupper_head_skip
     sub     w5, w5, #32         // Convert to uppercase
     strb    w5, [x0]
-1:  add     x0, x0, #1
+.Lupper_head_skip:
+    add     x0, x0, #1
     cmp     x0, x3
-    beq     9f
+    beq     .Lupper_ret
     tst     x0, #15
-    bne     1b
+    bne     .Lupper_head
 
-2:  // Process 16-byte aligned chunks with NEON
+.Lupper_aligned:  // Process 16-byte aligned chunks with NEON
     add     x4, x0, #15
     cmp     x4, x3
-    bgt     8f                  // Jump to tail processing
+    bgt     .Lupper_tail        // Jump to tail processing
     
-3:  // Main NEON loop - process 16 bytes at a time
+.Lupper_loop:  // Main NEON loop - process 16 bytes at a time
     ld1     {v0.16b}, [x0]      // Load 16 bytes
     
     // Check if bytes are lowercase letters (a-z)
@@ -61,23 +62,26 @@ neon_to_upper:
     add     x0, x0, #16
     add     x4, x0, #15
     cmp     x4, x3
-    ble     3b
+    ble     .Lupper_loop
 
-8:  // Process remaining tail bytes scalar
+.Lupper_tail:  // Process remaining tail bytes scalar
     cmp     x0, x3
-    beq     9f
-8:  ldrb    w5, [x0]
+    beq     .Lupper_ret
+.Lupper_tail_loop:
+    ldrb    w5, [x0]
     cmp     w5, #'a'
-    blt     8f
+    blt     .Lupper_tail_skip
     cmp     w5, #'z'
-    bgt     8f
+    bgt     .Lupper_tail_skip
     sub     w5, w5, #32
     strb    w5, [x0]
-8:  add     x0, x0, #1
+.Lupper_tail_skip:
+    add     x0, x0, #1
     cmp     x0, x3
-    bne     8b
+    bne     .Lupper_tail_loop
     
-9:  ret
+.Lupper_ret:
+    ret
 .size neon_to_upper, . - neon_to_upper
 
 // Function: neon_to_lower
@@ -87,8 +91,8 @@ neon_to_upper:
 .global neon_to_lower
 .type neon_to_lower, %function
 neon_to_lower:
-    cbz     x1, 9f              // Return if len == 0
-    cbz     x0, 9f              // Return if str == NULL
+    cbz     x1, .Llower_ret     // Return if len == 0
+    cbz     x0, .Llower_ret     // Return if str == NULL
     
     mov     x2, x0              // Save original string pointer
     add     x3, x0, x1          // End pointer
@@ -100,28 +104,29 @@ neon_to_lower:
 
     // Handle unaligned head bytes
     ands    x4, x0, #15
-    beq     2f                  // Already aligned
+    beq     .Llower_aligned     // Already aligned
     
-1:  // Scalar processing for head alignment
+.Llower_head:  // Scalar processing for head alignment
     ldrb    w5, [x0]
     cmp     w5, #'A'
-    blt     1f
+    blt     .Llower_head_skip
     cmp     w5, #'Z'
-    bgt     1f
+    bgt     .Llower_head_skip
     add     w5, w5, #32         // Convert to lowercase
     strb    w5, [x0]
-1:  add     x0, x0, #1
+.Llower_head_skip:
+    add     x0, x0, #1
     cmp     x0, x3
-    beq     9f
+    beq     .Llower_ret
     tst     x0, #15
-    bne     1b
+    bne     .Llower_head
 
-2:  // Process 16-byte aligned chunks with NEON
+.Llower_aligned:  // Process 16-byte aligned chunks with NEON
     add     x4, x0, #15
     cmp     x4, x3
-    bgt     8f                  // Jump to tail processing
+    bgt     .Llower_tail        // Jump to tail processing
     
-3:  // Main NEON loop - process 16 bytes at a time
+.Llower_loop:  // Main NEON loop - process 16 bytes at a time
     ld1     {v0.16b}, [x0]      // Load 16 bytes
     
     // Check if bytes are uppercase letters (A-Z)
@@ -137,21 +142,24 @@ neon_to_lower:
     add     x0, x0, #16
     add     x4, x0, #15
     cmp     x4, x3
-    ble     3b
+    ble     .Llower_loop
 
-8:  // Process remaining tail bytes scalar
+.Llower_tail:  // Process remaining tail bytes scalar
     cmp     x0, x3
-    beq     9f
-8:  ldrb    w5, [x0]
+    beq     .Llower_ret
+.Llower_tail_loop:
+    ldrb    w5, [x0]
     cmp     w5, #'A'
-    blt     8f
+    blt     .Llower_tail_skip
     cmp     w5, #'Z'
-    bgt     8f
+    bgt     .Llower_tail_skip
     add     w5, w5, #32
     strb    w5, [x0]
-8:  add     x0, x0, #1
+.Llower_tail_skip:
+    add     x0, x0, #1
     cmp     x0, x3
-    bne     8b
+    bne     .Llower_tail_loop
     
-9:  ret
+.Llower_ret:
+    ret
 .size neon_to_lower, . - neon_to_lower
