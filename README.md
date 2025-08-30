@@ -41,20 +41,54 @@ See [`docs/API.md`](docs/API.md) for detailed documentation.
 
 ## Building
 
-### Native ARM64
+### Native ARM64 (Raspberry Pi, Apple Silicon, etc.)
 ```bash
+# On native ARM64 hardware
+make clean
 make all      # Build library
 make test     # Run tests
+make benchmark # Run performance tests
 ```
 
-### Cross-Compilation (x86_64 → ARM64)
+### Cross-Compilation in WSL (x86_64 → ARM64)
 ```bash
-# Ubuntu/WSL
-sudo apt install gcc-aarch64-linux-gnu qemu-user-static
+# Install tools in WSL/Ubuntu
+sudo apt update
+sudo apt install gcc-aarch64-linux-gnu qemu-user libc6-arm64-cross
+
+# Build and test with QEMU
+make -f Makefile.wsl clean
+make -f Makefile.wsl tests
+make -f Makefile.wsl test      # Runs with QEMU emulation
+```
+
+### Platform-Specific Instructions
+
+#### Apple Silicon Mac (M1/M2/M3)
+```bash
+# Modify Makefile to use clang
+sed -i '' 's/gcc/clang/g' Makefile
+sed -i '' 's/as/as -arch arm64/g' Makefile
 
 # Build and test
-make -f Makefile.cross all
-qemu-aarch64-static build/test_harness
+make clean && make test
+```
+
+#### Raspberry Pi 4/5 (64-bit OS)
+```bash
+# Install build tools if needed
+sudo apt-get install build-essential
+
+# Build and benchmark
+make clean && make benchmark
+```
+
+#### Android (Termux)
+```bash
+# In Termux
+pkg install clang make
+export CC=clang
+make clean && make all
 ```
 
 See [`docs/BUILDING.md`](docs/BUILDING.md) for detailed build instructions.
@@ -92,13 +126,48 @@ Benchmarked on ARM Cortex-A72 (1.8GHz):
 - Linux ARM64
 - macOS Apple Silicon  
 - Raspberry Pi 4+
+- AWS Graviton
+- Android (ARMv8)
 
 ## Testing
 
 Quick functionality test:
 ```bash
-# See docs/TESTING.md for comprehensive testing guide
+# Native ARM
 make tests && build/test_harness
+
+# WSL with QEMU
+make -f Makefile.wsl test
+```
+
+See [`docs/TESTING.md`](docs/TESTING.md) for comprehensive testing guide.
+
+## Integration Example
+
+```c
+// myapp.c
+#include "arm_string_ops.h"
+#include <stdio.h>
+#include <string.h>
+
+int main() {
+    char buffer[] = "hello world";
+    
+    neon_to_upper(buffer, strlen(buffer));
+    printf("%s\n", buffer);  // HELLO WORLD
+    
+    if (neon_utf8_validate(buffer, strlen(buffer))) {
+        printf("Valid UTF-8 with %zu characters\n", 
+               neon_utf8_count_chars(buffer, strlen(buffer)));
+    }
+    
+    return 0;
+}
+```
+
+Compile:
+```bash
+gcc -O3 -o myapp myapp.c -L./build -larm_string_ops
 ```
 
 ## Project Structure
@@ -106,9 +175,20 @@ make tests && build/test_harness
 ```
 ├── include/arm_string_ops.h    # Public API
 ├── src/                        # ARMv8 assembly source
+│   ├── case_ops.S             # Case conversion operations
+│   └── utf8_ops.S             # UTF-8 operations
 ├── docs/                       # Documentation
+│   ├── API.md                 # API reference
+│   ├── BUILDING.md            # Build instructions
+│   └── TESTING.md             # Testing guide
 ├── test/                       # Test suite
-└── Makefile                    # Build system
+│   ├── test_harness.c         # Functionality tests
+│   └── benchmark.c            # Performance benchmarks
+├── bindings/                   # Language bindings
+│   └── rust/lib.rs            # Rust FFI bindings
+├── Makefile                    # Native build
+├── Makefile.wsl               # WSL cross-compilation
+└── WSL_SETUP_GUIDE.md         # WSL setup instructions
 ```
 
 ## License
