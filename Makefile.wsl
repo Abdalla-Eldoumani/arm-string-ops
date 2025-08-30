@@ -1,0 +1,99 @@
+# Makefile for WSL ARM64 Cross-Compilation
+# Use this file in WSL to cross-compile for ARM64
+
+# ARM64 cross-compilation tools
+CC = aarch64-linux-gnu-gcc
+AS = aarch64-linux-gnu-as
+AR = aarch64-linux-gnu-ar
+
+# Architecture flags for ARM64
+ARCH_FLAGS = -march=armv8-a+simd
+OPT_FLAGS = -O3
+CFLAGS = $(ARCH_FLAGS) $(OPT_FLAGS) -Wall -Wextra -Iinclude -std=c99 -static
+ASFLAGS = $(ARCH_FLAGS)
+
+# Directories
+SRC_DIR = src
+INCLUDE_DIR = include
+TEST_DIR = test
+BUILD_DIR = build
+
+# Library name
+LIB_NAME = arm_string_ops
+STATIC_LIB = lib$(LIB_NAME).a
+
+# Source files
+ASM_SOURCES = $(SRC_DIR)/case_ops.S $(SRC_DIR)/utf8_ops.S
+ASM_OBJECTS = $(ASM_SOURCES:.S=.o)
+
+# Default target
+all: $(BUILD_DIR) $(BUILD_DIR)/$(STATIC_LIB)
+
+# Create build directory
+$(BUILD_DIR):
+	mkdir -p $(BUILD_DIR)
+
+# Compile assembly sources
+%.o: %.S
+	$(AS) $(ASFLAGS) -o $@ $<
+
+# Create static library
+$(BUILD_DIR)/$(STATIC_LIB): $(ASM_OBJECTS)
+	$(AR) rcs $@ $^
+	@echo "ARM64 static library created: $@"
+
+# Build test harness
+$(BUILD_DIR)/test_harness: $(TEST_DIR)/test_harness.c $(BUILD_DIR)/$(STATIC_LIB)
+	$(CC) $(CFLAGS) -o $@ $< $(BUILD_DIR)/$(STATIC_LIB)
+	@echo "ARM64 test harness built: $@"
+
+# Build benchmark
+$(BUILD_DIR)/benchmark: $(TEST_DIR)/benchmark.c $(BUILD_DIR)/$(STATIC_LIB)
+	$(CC) $(CFLAGS) -o $@ $< $(BUILD_DIR)/$(STATIC_LIB)
+	@echo "ARM64 benchmark built: $@"
+
+# Build all tests
+tests: $(BUILD_DIR) $(BUILD_DIR)/test_harness $(BUILD_DIR)/benchmark
+	@echo "All ARM64 tests built successfully!"
+
+# Run tests with QEMU
+test: $(BUILD_DIR)/test_harness
+	@echo "Running ARM64 tests with QEMU..."
+	qemu-aarch64 -L /usr/aarch64-linux-gnu $(BUILD_DIR)/test_harness
+
+# Run benchmark with QEMU
+benchmark: $(BUILD_DIR)/benchmark
+	@echo "Running ARM64 benchmark with QEMU..."
+	qemu-aarch64 -L /usr/aarch64-linux-gnu $(BUILD_DIR)/benchmark
+
+# Clean build artifacts
+clean:
+	rm -rf $(BUILD_DIR)
+	rm -f $(SRC_DIR)/*.o
+	rm -f *.a *.so
+
+# Quick test run
+quick-test: tests
+	@echo "=== ARM64 Test Results (via QEMU) ==="
+	@qemu-aarch64 -L /usr/aarch64-linux-gnu $(BUILD_DIR)/test_harness
+
+# Help
+help:
+	@echo "WSL ARM64 Cross-Compilation Makefile"
+	@echo "===================================="
+	@echo "Prerequisites:"
+	@echo "  sudo apt-get install gcc-aarch64-linux-gnu qemu-user"
+	@echo ""
+	@echo "Targets:"
+	@echo "  make all        - Build ARM64 library"
+	@echo "  make tests      - Build all test programs"
+	@echo "  make test       - Build and run tests with QEMU"
+	@echo "  make benchmark  - Build and run benchmark with QEMU"
+	@echo "  make quick-test - Quick test run"
+	@echo "  make clean      - Remove build artifacts"
+	@echo ""
+	@echo "Example workflow:"
+	@echo "  make tests      # Build tests"
+	@echo "  make test       # Run with QEMU"
+
+.PHONY: all tests test benchmark clean quick-test help
