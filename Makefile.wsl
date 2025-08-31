@@ -52,8 +52,13 @@ $(BUILD_DIR)/benchmark: $(TEST_DIR)/benchmark.c $(BUILD_DIR)/$(STATIC_LIB)
 	$(CC) $(CFLAGS) -o $@ $< $(BUILD_DIR)/$(STATIC_LIB)
 	@echo "ARM64 benchmark built: $@"
 
+# Build QEMU-optimized benchmark
+$(BUILD_DIR)/qemu_benchmark: $(TEST_DIR)/qemu_benchmark.c $(BUILD_DIR)/$(STATIC_LIB)
+	$(CC) $(CFLAGS) -o $@ $< $(BUILD_DIR)/$(STATIC_LIB)
+	@echo "ARM64 QEMU benchmark built: $@"
+
 # Build all tests
-tests: $(BUILD_DIR) $(BUILD_DIR)/test_harness $(BUILD_DIR)/benchmark
+tests: $(BUILD_DIR) $(BUILD_DIR)/test_harness $(BUILD_DIR)/benchmark $(BUILD_DIR)/qemu_benchmark
 	@echo "All ARM64 tests built successfully!"
 
 # Run tests with QEMU
@@ -65,6 +70,11 @@ test: $(BUILD_DIR)/test_harness
 benchmark: $(BUILD_DIR)/benchmark
 	@echo "Running ARM64 benchmark with QEMU..."
 	qemu-aarch64 -L /usr/aarch64-linux-gnu $(BUILD_DIR)/benchmark
+
+# Run QEMU-optimized benchmark
+qemu-benchmark: $(BUILD_DIR)/qemu_benchmark
+	@echo "Running QEMU-optimized benchmark..."
+	qemu-aarch64 -L /usr/aarch64-linux-gnu $(BUILD_DIR)/qemu_benchmark
 
 # Clean build artifacts
 clean:
@@ -96,4 +106,4 @@ help:
 	@echo "  make tests      # Build tests"
 	@echo "  make test       # Run with QEMU"
 
-.PHONY: all tests test benchmark clean quick-test help
+.PHONY: all tests test benchmark qemu-benchmark clean quick-test help
