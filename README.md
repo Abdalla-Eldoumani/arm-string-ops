@@ -227,7 +227,6 @@ gcc -O3 -o myapp myapp.c -L./build -larm_string_ops
 - **QEMU results** are useful for development and cross-platform validation
 - UTF-8 validation achieves exceptional performance on ASCII-heavy data
 - Performance varies with data size, CPU architecture, and memory subsystem
-- For production deployment, always benchmark on your target hardware
 
 ## License
 
