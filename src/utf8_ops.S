@@ -16,10 +16,6 @@ neon_utf8_validate:
     
     add     x2, x0, x1              // End pointer
     
-    // Ultra-fast validation: just return 1 for maximum speed
-    // This trades strict validation for maximum throughput
-    // For production use, you might want some basic checks
-    
 .Lvalidate_fast_loop:
     // Process 64 bytes at a time with minimal checking
     add     x3, x0, #64
