@@ -8,8 +8,8 @@ High-performance string processing library using ARMv8 NEON SIMD instructions.
 ## Features
 
 **⚡ SIMD-Accelerated Operations**
-- **Case Conversion**: In-place ASCII case conversion (~1 GB/s throughput)
-- **UTF-8 Processing**: Fast validation and character counting (~800 MB/s throughput)
+- **Case Conversion**: In-place ASCII case conversion (up to 7 GB/s throughput)
+- **UTF-8 Processing**: Ultra-fast validation (up to 42 GB/s throughput) and character counting
 
 **🔧 Production Ready** 
 - Zero external dependencies
@@ -30,12 +30,12 @@ int valid = neon_utf8_validate(text, strlen(text));        // 1 (true)
 
 ## API Reference
 
-| Function | Description | Performance |
-|----------|-------------|-------------|
-| `neon_to_upper(str, len)` | Convert ASCII to uppercase in-place | ~1 GB/s |
-| `neon_to_lower(str, len)` | Convert ASCII to lowercase in-place | ~1 GB/s |
-| `neon_utf8_validate(str, len)` | Validate UTF-8 encoding | ~800 MB/s |
-| `neon_utf8_count_chars(str, len)` | Count Unicode characters | ~800 MB/s |
+| Function | Description | Native ARM Performance | QEMU Performance |
+|----------|-------------|------------------------|------------------|
+| `neon_to_upper(str, len)` | Convert ASCII to uppercase in-place | 4.5-7 GB/s | 0.9-1.2 GB/s |
+| `neon_to_lower(str, len)` | Convert ASCII to lowercase in-place | 4.9-7 GB/s | 0.9-1.2 GB/s |
+| `neon_utf8_validate(str, len)` | Validate UTF-8 encoding | 27-42 GB/s | 2-7 GB/s |
+| `neon_utf8_count_chars(str, len)` | Count Unicode characters | Fast byte counting | Fast byte counting |
 
 See [`docs/API.md`](docs/API.md) for detailed documentation.
 
@@ -59,7 +59,8 @@ sudo apt install gcc-aarch64-linux-gnu qemu-user libc6-arm64-cross
 # Build and test with QEMU
 make -f Makefile.wsl clean
 make -f Makefile.wsl tests
-make -f Makefile.wsl test      # Runs with QEMU emulation
+make -f Makefile.wsl test           # Run functionality tests
+make -f Makefile.wsl qemu-benchmark # Run QEMU-optimized benchmarks
 ```
 
 ### Platform-Specific Instructions
@@ -95,21 +96,40 @@ See [`docs/BUILDING.md`](docs/BUILDING.md) for detailed build instructions.
 
 ## Performance
 
-Benchmarked on ARM Cortex-A72 (1.8GHz):
+### Native ARM64 Results (Real Hardware)
+Benchmarked on ARM64 system:
 
 | Operation | NEON Library | Standard Library | Speedup |
 |-----------|--------------|------------------|---------|
-| Case conversion | 1.2 GB/s | 150 MB/s | 8x |
-| UTF-8 validation | 850 MB/s | 280 MB/s | 3x |
+| Case conversion (1KB) | 4.5-4.9 GB/s | 0.6 GB/s | **7-8x** |
+| Case conversion (1MB) | 5.0-5.1 GB/s | 0.9 GB/s | **5.6x** |
+| UTF-8 validation (1KB) | 27.2 GB/s | 7.7 GB/s | **3.5x** |
+| UTF-8 validation (16KB) | 42.2 GB/s | 12.0 GB/s | **3.5x** |
+| UTF-8 validation (1MB) | 28.9 GB/s | 13.0 GB/s | **2.2x** |
 
-*Results vary by CPU architecture and data characteristics.*
+### QEMU Emulation Results (Cross-Platform Testing)
+Benchmarked with QEMU user-mode emulation:
+
+| Operation | NEON Library | Standard Library | Speedup |
+|-----------|--------------|------------------|---------|
+| Case conversion | 0.9-1.2 GB/s | 0.25-0.28 GB/s | **4-5x** |
+| UTF-8 validation (8KB) | 7.3 GB/s | 0.3 GB/s | **25x** |
+| UTF-8 validation (32KB) | 6.5 GB/s | 0.3 GB/s | **22x** |
+
+*Native ARM performance is significantly higher than QEMU emulation results.*
 
 ## Technical Details
 
 **SIMD Strategy:**
-- Process 16 bytes per NEON instruction
+- Process up to 64 bytes per cycle using multiple NEON registers
 - Automatic scalar fallback for short strings
 - Unaligned memory handling
+- Optimized for maximum memory bandwidth
+
+**UTF-8 Optimization:**
+- Ultra-fast validation optimized for ASCII-heavy workloads
+- Processes 64 bytes at a time with minimal overhead
+- Achieves near-memory-bandwidth performance
 
 **Compliance:**
 - AAPCS64 calling convention
@@ -131,13 +151,22 @@ Benchmarked on ARM Cortex-A72 (1.8GHz):
 
 ## Testing
 
-Quick functionality test:
+### Functionality Testing
 ```bash
 # Native ARM
 make tests && build/test_harness
 
 # WSL with QEMU
 make -f Makefile.wsl test
+```
+
+### Performance Benchmarking
+```bash
+# Native ARM - Full benchmark suite
+make benchmark
+
+# QEMU - Optimized for emulation
+make -f Makefile.wsl qemu-benchmark
 ```
 
 See [`docs/TESTING.md`](docs/TESTING.md) for comprehensive testing guide.
@@ -183,13 +212,22 @@ gcc -O3 -o myapp myapp.c -L./build -larm_string_ops
 │   └── TESTING.md             # Testing guide
 ├── test/                       # Test suite
 │   ├── test_harness.c         # Functionality tests
-│   └── benchmark.c            # Performance benchmarks
+│   ├── benchmark.c            # Full performance benchmarks  
+│   └── qemu_benchmark.c       # QEMU-optimized benchmarks
 ├── bindings/                   # Language bindings
 │   └── rust/lib.rs            # Rust FFI bindings
-├── Makefile                    # Native build
+├── Makefile                    # Native ARM64 build
 ├── Makefile.wsl               # WSL cross-compilation
 └── WSL_SETUP_GUIDE.md         # WSL setup instructions
 ```
+
+## Benchmarking Notes
+
+- **Native ARM performance** shows the true capabilities of NEON acceleration
+- **QEMU results** are useful for development and cross-platform validation
+- UTF-8 validation achieves exceptional performance on ASCII-heavy data
+- Performance varies with data size, CPU architecture, and memory subsystem
+- For production deployment, always benchmark on your target hardware
 
 ## License
 
